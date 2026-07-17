@@ -11,26 +11,40 @@ const shareRoutes = require('./routes/shareRoutes');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// CLIENT_URL can be a single Vercel URL or a comma-separated list of allowed
-// frontend origins. Local Vite is kept available for development.
-const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:5173')
+// Allowed Origins
+const allowedOrigins = (
+  process.env.CLIENT_URL ||
+  'http://localhost:5173,https://note-app-nu-tawny.vercel.app'
+)
   .split(',')
-  .map((origin) => origin.trim())
-  .filter(Boolean);
+  .map(origin => origin.trim());
 
-app.use(cors({
-  origin(origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
-    return callback(new Error('Origin not allowed by CORS'));
-  }
-}));
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow Postman, mobile apps, curl, etc.
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      console.log("Blocked Origin:", origin);
+
+      return callback(new Error(`CORS blocked for origin: ${origin}`));
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
+
 app.use(express.json({ limit: '1mb' }));
 
-// Connect to MongoDB
+// Connect MongoDB
 connectDB();
 
-// This route intentionally does not require MongoDB, so Render can use it for
-// health checks while the database is reconnecting.
+// Health Check
 app.get('/health', (req, res) => {
   res.status(200).json({
     status: 'ok',
@@ -38,13 +52,12 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Do not let requests wait in Mongoose's operation buffer when Atlas/local
-// MongoDB is unreachable. This also prevents a database outage being reported
-// to clients as an authentication failure.
+// Database Check Middleware
 app.use('/api', (req, res, next) => {
   if (!isDatabaseConnected()) {
     return res.status(503).json({
-      message: 'Database unavailable. Check MONGODB_URI and MongoDB Atlas Network Access.'
+      message:
+        'Database unavailable. Check MONGODB_URI and MongoDB Atlas Network Access.'
     });
   }
   next();
@@ -58,14 +71,20 @@ app.use('/api/share', shareRoutes);
 app.get('/', (req, res) => {
   res.json({
     message: 'Note Taking API is running',
-    status: mongoose.connection.readyState === 1 ? 'ok' : 'database-unavailable'
+    status:
+      mongoose.connection.readyState === 1
+        ? 'ok'
+        : 'database-unavailable'
   });
 });
 
+// Error Handler
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(res.statusCode >= 400 ? res.statusCode : 500).json({
-    message: err.message || 'Internal server error'
+
+  res.status(500).json({
+    success: false,
+    message: err.message
   });
 });
 
