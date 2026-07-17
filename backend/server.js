@@ -11,12 +11,32 @@ const shareRoutes = require('./routes/shareRoutes');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
-app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:5173' }));
+// CLIENT_URL can be a single Vercel URL or a comma-separated list of allowed
+// frontend origins. Local Vite is kept available for development.
+const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:5173')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error('Origin not allowed by CORS'));
+  }
+}));
 app.use(express.json({ limit: '1mb' }));
 
 // Connect to MongoDB
 connectDB();
+
+// This route intentionally does not require MongoDB, so Render can use it for
+// health checks while the database is reconnecting.
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    database: isDatabaseConnected() ? 'connected' : 'unavailable'
+  });
+});
 
 // Do not let requests wait in Mongoose's operation buffer when Atlas/local
 // MongoDB is unreachable. This also prevents a database outage being reported

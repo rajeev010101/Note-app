@@ -69,6 +69,12 @@ npm run dev
 
 Open `http://localhost:5173`. The API is served at `http://localhost:5000` and defaults to `http://localhost:5000/api` in the frontend. Set `VITE_API_URL` in `frontend/.env` only when the API lives elsewhere.
 
+### Render + Vercel deployment
+
+Deploy `backend` as a Render Web Service with build command `npm install`, start command `npm start`, and the environment variables `MONGODB_URI`, `JWT_SECRET`, and `CLIENT_URL`. Set `CLIENT_URL` to the Vercel production URL (for example, `https://your-app.vercel.app`). To permit local development as well, provide a comma-separated list: `https://your-app.vercel.app,http://localhost:5173`.
+
+Deploy `frontend` to Vercel with `frontend` as the root directory. Add `VITE_API_URL=https://note-app-vazd.onrender.com` to Vercel's environment variables, then redeploy. The frontend adds `/api` automatically, so it will call `https://note-app-vazd.onrender.com/api/...`; a value ending in `/api` also works. Verify Render using `/` or `/health`.
+
 ### MongoDB Atlas connection troubleshooting
 
 If the server reports that it cannot connect to any Atlas servers, fix the Atlas configuration before trying to sign in:
