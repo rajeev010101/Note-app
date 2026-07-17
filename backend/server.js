@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 require('dotenv').config();
 
-const connectDB = require('./config/db');
+const { connectDB, isDatabaseConnected } = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
 const noteRoutes = require('./routes/noteRoutes');
 const shareRoutes = require('./routes/shareRoutes');
@@ -17,6 +17,18 @@ app.use(express.json({ limit: '1mb' }));
 
 // Connect to MongoDB
 connectDB();
+
+// Do not let requests wait in Mongoose's operation buffer when Atlas/local
+// MongoDB is unreachable. This also prevents a database outage being reported
+// to clients as an authentication failure.
+app.use('/api', (req, res, next) => {
+  if (!isDatabaseConnected()) {
+    return res.status(503).json({
+      message: 'Database unavailable. Check MONGODB_URI and MongoDB Atlas Network Access.'
+    });
+  }
+  next();
+});
 
 // Routes
 app.use('/api/auth', authRoutes);

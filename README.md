@@ -69,6 +69,17 @@ npm run dev
 
 Open `http://localhost:5173`. The API is served at `http://localhost:5000` and defaults to `http://localhost:5000/api` in the frontend. Set `VITE_API_URL` in `frontend/.env` only when the API lives elsewhere.
 
+### MongoDB Atlas connection troubleshooting
+
+If the server reports that it cannot connect to any Atlas servers, fix the Atlas configuration before trying to sign in:
+
+1. In Atlas, open **Security > Network Access** and add the public IP address of the machine running the backend. Use `0.0.0.0/0` only as a temporary development-only rule.
+2. In **Database Access**, confirm the database user in `MONGODB_URI` exists and has access to the target database.
+3. Copy the current Node.js connection string from Atlas and put it in `backend/.env` as `MONGODB_URI`. Percent-encode reserved characters in the username or password.
+4. Restart the backend after changing `.env`.
+
+While the database is unavailable, API routes now return `503 Database unavailable` immediately instead of waiting for a Mongoose buffering timeout. A valid JWT alone cannot authenticate a request because the server must still load the user from MongoDB.
+
 ## Database Schema
 
 ### `users`
